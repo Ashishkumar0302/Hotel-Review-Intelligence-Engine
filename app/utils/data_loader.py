@@ -102,6 +102,24 @@ def load_hotel_categories() -> dict[str, Any]:
     return load_json("hotel_categories.json")
 
 
+def load_hotel_reviews() -> list[dict[str, Any]]:
+    records = load_json("hotel_reviews.json")
+    return records if isinstance(records, list) else []
+
+
+def load_hotel_metadata() -> dict[str, dict[str, Any]]:
+    metadata: dict[str, dict[str, Any]] = {}
+    for review in load_hotel_reviews():
+        hotel_id = str(review.get("hotel_id", "")).strip()
+        if not hotel_id or hotel_id in metadata:
+            continue
+        metadata[hotel_id] = {
+            "hotel_name": review.get("hotel_name", hotel_id),
+            "hotel_category": review.get("hotel_category", "Unknown"),
+        }
+    return metadata
+
+
 def numeric_aspect_columns(df: pd.DataFrame) -> list[str]:
     if df.empty:
         return []
@@ -127,6 +145,7 @@ def artifact_health() -> pd.DataFrame:
         "consistency_matrix.parquet",
         "mention_matrix.parquet",
         "review_aspects.parquet",
+        "hotel_reviews.json",
         "aspect_descriptions.json",
         "aspect_keywords.json",
         "aspect_embeddings.npy",

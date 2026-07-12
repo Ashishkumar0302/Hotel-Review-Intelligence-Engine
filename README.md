@@ -1,25 +1,40 @@
 # Hotel Review Intelligence Engine
 
-Production Streamlit application for exploring Expedia-style hotel recommendations from existing pipeline artifacts.
+Explainable hotel intelligence app for the Expedia hackathon.
 
-The machine learning pipeline is complete and lives in the notebooks under `notebooks/`. The app only consumes generated files in `artifacts/`; it does not retrain models, regenerate outputs, or modify recommendation logic.
+The notebooks in `notebooks/` already produced the ML outputs. This repository only ships the Streamlit app and consumes the generated files in `artifacts/`; it does not retrain models or regenerate artifacts.
 
-## App Pages
+## What you need
 
-- `Profile Explorer`: traveler profile descriptions, top aspect priorities, radar charts, and importance bars.
-- `Hotel Recommendations`: top 5 recommendations per profile with relevance score, match reasons, strengths, confidence, trend, and contradiction warnings.
-- `System Insights`: aspect distribution, review volume, hotel statistics, language signals, temporal trends, and contradiction examples.
+1. Python 3.10 or newer.
+2. The repository clone.
+3. The checked-in `artifacts/` directory.
 
-## Run Locally
+## Quick Start
 
 ```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install --upgrade pip
 pip install -r requirements.txt
 streamlit run app/streamlit_app.py
 ```
 
-## Streamlit Cloud
+On macOS or Linux, activate the virtual environment with `source .venv/bin/activate`.
 
-Use `app/streamlit_app.py` as the entry point. The repository includes `requirements.txt` and `.streamlit/config.toml` for deployment.
+## Pages
+
+- `Profile Explorer`: traveler descriptions, top priorities, radar charts, and aspect importance.
+- `Hotel Recommendations`: top 5 recommendations per profile with match score, reasons, strengths, warnings, and trend.
+- `System Insights`: aspect distribution, review volume, hotel stats, temporal trends, and contradiction examples.
+
+## Deployment
+
+The app is ready for Streamlit Cloud.
+
+- Entry point: `app/streamlit_app.py`
+- Dependencies: `requirements.txt`
+- Streamlit config: `.streamlit/config.toml`
 
 ## Artifact Contract
 
@@ -28,10 +43,10 @@ The app reads schemas directly from the existing artifacts and handles missing f
 Primary files used:
 
 - `artifacts/recommendations.parquet`
+- `artifacts/hotel_reviews.json`
 - `artifacts/profile_vectors.parquet`
 - `artifacts/profiles_clean.parquet`
 - `artifacts/hotel_matrix.parquet`
-- `artifacts/hotel_confidence_scores.parquet`
 - `artifacts/hotel_contradictions.parquet`
 - `artifacts/hotel_trends.parquet`
 - `artifacts/review_aspects.parquet`

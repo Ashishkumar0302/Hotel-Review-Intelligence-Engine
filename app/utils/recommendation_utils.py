@@ -75,48 +75,86 @@ def trend_display(label: str, score: float | None = None) -> str:
     return f"{prefix} ({sign}{percent}%)"
 
 
-def hotel_display_name(hotel_id: Any, categories: dict[str, str] | None = None) -> str:
+def hotel_display_name(
+    hotel_id: Any,
+    categories: dict[str, str] | None = None,
+    hotel_metadata: dict[str, dict[str, Any]] | None = None,
+) -> str:
     hotel_key = str(hotel_id)
-    curated = {
-        "H017": "Harbor Grand Suites",
-        "H041": "Urban Luxe Downtown",
-        "H048": "Metropolitan Central",
-    }
-    if hotel_key in curated:
-        name = curated[hotel_key]
-    else:
-        adjectives = [
-            "Urban",
-            "Harbor",
-            "Grand",
-            "Metropolitan",
-            "Heritage",
-            "Central",
-            "Skyline",
-            "Riverside",
-            "Garden",
-            "Vista",
-            "Premier",
-            "Sapphire",
-        ]
-        nouns = [
-            "Retreat",
-            "Suites",
-            "House",
-            "Residency",
-            "Hotel",
-            "Lodge",
-            "Court",
-            "Terrace",
-            "Place",
-            "Inn",
-            "Haven",
-            "Collection",
-        ]
-        number = int("".join(ch for ch in hotel_key if ch.isdigit()) or 0)
-        name = f"{adjectives[number % len(adjectives)]} {nouns[(number // len(adjectives)) % len(nouns)]}"
-    category = (categories or {}).get(hotel_key)
+    metadata = (hotel_metadata or {}).get(hotel_key, {})
+    name = metadata.get("hotel_name", hotel_key)
+    category = metadata.get("hotel_category") or (categories or {}).get(hotel_key)
     return f"{name} • {category}" if category else f"{name} • {hotel_key}"
+
+
+def hotel_metadata_fields(
+    hotel_id: Any,
+    hotel_metadata: dict[str, dict[str, Any]] | None = None,
+    categories: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    hotel_key = str(hotel_id)
+    metadata = (hotel_metadata or {}).get(hotel_key, {})
+    return {
+        "hotel_name": metadata.get("hotel_name", hotel_key),
+        "hotel_category": metadata.get("hotel_category") or (categories or {}).get(hotel_key, "Unknown"),
+    }
+
+
+def desired_dimensions_for_profile(profile_values: pd.Series, limit: int = 3) -> list[str]:
+    aliases = {
+        "culture": "local_culture",
+        "location": "location_central",
+    }
+    dimensions = [aliases.get(aspect, str(aspect)) for aspect in top_aspects_from_series(profile_values, limit).index]
+    preferred_order = ["safety", "local_culture", "location_central"]
+    ordered = [dimension for dimension in preferred_order if dimension in dimensions]
+    ordered.extend(dimension for dimension in dimensions if dimension not in ordered)
+    return ordered
+
+
+def profile_archetype(profile_id: str, description: str, desired_dims: list[str]) -> str:
+    text = f"{profile_id} {description} {' '.join(desired_dims)}".lower()
+    pieces = []
+    if "solo" in text:
+        pieces.append("solo")
+    if "female" in text or "safety" in desired_dims:
+        pieces.append("female")
+    if "culture" in text:
+        pieces.append("culture")
+    if not pieces:
+        pieces = [profile_id.lower()]
+    return "_".join(pieces)
+
+
+def recommendation_schema_payload(
+    profile_id: str,
+    description: str,
+    profile_values: pd.Series,
+    recommendations: pd.DataFrame,
+    hotel_metadata: dict[str, dict[str, Any]] | None = None,
+    categories: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    desired_dims = desired_dimensions_for_profile(profile_values)
+    top_hotels = []
+    for _, row in recommendations.iterrows():
+        hotel_id = str(row.get("hotel_id", ""))
+        metadata = hotel_metadata_fields(hotel_id, hotel_metadata, categories)
+        score = row.get("score", row.get("relevance_score"))
+        top_hotels.append(
+            {
+                "rank": int(row.get("rank", len(top_hotels) + 1)),
+                "hotel_id": hotel_id,
+                "hotel_name": metadata["hotel_name"],
+                "hotel_category": metadata["hotel_category"],
+                "score": round(float(score), 3) if score is not None and not pd.isna(score) else None,
+            }
+        )
+    return {
+        "profile_id": str(profile_id),
+        "archetype": profile_archetype(profile_id, description, desired_dims),
+        "desired_dims": desired_dims,
+        "top_hotels": top_hotels,
+    }
 
 
 def compact_description(text: Any, limit: int = 105) -> str:
